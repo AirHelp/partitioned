@@ -66,7 +66,7 @@ module ActiveRecord::ConnectionAdapters
     #
     # @param [String] table_name the table name to query
     # @return [Boolean] returns true if the table should have its primary key prefetched.
-    def prefetch_primary_key?(table_name)
+    def prefetch_primary_key?(table_name = nil)
       return false
     end
 

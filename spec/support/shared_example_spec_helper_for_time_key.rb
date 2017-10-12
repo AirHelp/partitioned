@@ -72,6 +72,9 @@ shared_examples_for "check that basic operations with postgres works correctly f
 
   context "when try to update a record with id = 1" do
 
+    let(:stringio) { StringIO.new }
+    let(:logger) { Logger.new(stringio) }
+
     it "returns updated employee name" do
       record = subject.find(1)
       original_created_at = record.created_at
@@ -79,6 +82,19 @@ shared_examples_for "check that basic operations with postgres works correctly f
       result = subject.find(1)
       expect(result.name).to eq "Kevin"
       expect(result.created_at).to eq original_created_at
+    end
+
+    it "uses proper partition in update" do
+      record = subject.find(1)
+      original_created_at = record.created_at
+      ActiveRecord::Base.logger = logger
+      subject.update(1, :name => 'Kevin')
+      ActiveRecord::Base.logger = Rails.logger
+      partition = record.partition_table_name.split('.').last
+      expected_sql = <<-SQL
+        UPDATE "employees_partitions"."#{ partition }" "employees" SET "name" = $1, "updated_at" = $2, "created_at" = $3 WHERE "employees"."id" = $4
+      SQL
+      expect(stringio.string).to include(expected_sql.strip)
     end
 
   end # when try to update a record with id = 1
@@ -121,6 +137,12 @@ shared_examples_for "check that basic operations with postgres works correctly f
     end
 
   end # when try to delete a record with id = 1
+
+  it "destroys a record without any error" do
+    expect {
+      subject.find(1).destroy
+    }.not_to raise_error
+  end
 
   context "when try to create new record outside the range of partitions" do
 

@@ -199,6 +199,18 @@ turns into the following SQL:
 update employees_partitions.p1 set name = 'Not Keith' where id = 1;
 ```
 
+## Testing
+
+```bash
+appraisal install
+```
+
+```bash
+appraisal rails-5-1 rspec
+# or:
+# appraisal rspec
+```
+
 ## Contributing
 
 1. Fork it

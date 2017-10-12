@@ -106,20 +106,20 @@ module Partitioned
       @sql_adapter ||= connection.partitioned_sql_adapter(self)
       return @sql_adapter
     end
-    
+
     def self.arel_table_from_key_values(partition_key_values, as = nil)
       @arel_tables ||= {}
       new_arel_table = @arel_tables[[partition_key_values, as]]
-      
+
       unless new_arel_table
-        arel_engine_hash = {:engine => self.arel_engine, :as => as}
+        arel_engine_hash = {:type_caster => self.arel_engine, :as => as}
         new_arel_table = Arel::Table.new(self.partition_table_name(*partition_key_values), arel_engine_hash)
         @arel_tables[[partition_key_values, as]] = new_arel_table
       end
 
       return new_arel_table
     end
-    
+
     #
     # In activerecord 3.0 we need to supply an Arel::Table for the key value(s) used
     # to determine the specific child table to access.
@@ -158,7 +158,10 @@ module Partitioned
     # @return [Hash] the scoping
     def self.from_partition(*partition_key_values)
       table_alias_name = partition_table_alias_name(*partition_key_values)
-      return ActiveRecord::Relation.new(self, self.arel_table_from_key_values(partition_key_values, table_alias_name))
+      arel_table = self.arel_table_from_key_values(partition_key_values, table_alias_name)
+      predicate_builder = ActiveRecord::PredicateBuilder.new ActiveRecord::TableMetadata.new(self, arel_table)
+
+      return ActiveRecord::Relation.new(self, arel_table, predicate_builder)
     end
 
     #
@@ -201,7 +204,7 @@ module Partitioned
     #
     # Yields an object used to configure the ActiveRecord class for partitioning
     # using the Configurator Domain Specific Language.
-    # 
+    #
     # usage:
     #   partitioned do |partition|
     #     partition.on    :company_id
